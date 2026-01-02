@@ -1,11 +1,11 @@
 """
-VLM Service - Phi-3-Vision Vision Language Model
+VLM Service - LLaVA-1.5-7B Vision Language Model
 Gère le chargement et l'inférence du modèle VLM local.
-Optimisé pour GPU 4GB VRAM avec quantisation 4-bit.
+Optimisé pour GPU 6GB VRAM avec quantization 4-bit.
 """
 
 import torch
-from transformers import AutoProcessor, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoProcessor, LlavaForConditionalGeneration, BitsAndBytesConfig
 from typing import Optional, Dict, Any
 from PIL import Image
 import logging
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class VLMService:
-    """Service pour le modèle Vision-Language Phi-3-Vision."""
+    """Service pour le modèle Vision-Language LLaVA."""
     
     def __init__(self, config: Dict[str, Any]):
         """
@@ -32,12 +32,11 @@ class VLMService:
         
     def load_model(self) -> None:
         """
-        Charge le modèle VLM avec quantisation 4-bit.
+        Charge le modèle VLM avec quantization 4-bit.
         
-        Phi-3-Vision (4.2B params) - optimisé pour 4GB VRAM.
+        LLaVA-1.5-7B - optimisé pour 6GB VRAM.
         """
         model_name = self.config['name']
-        trust_remote_code = self.config.get('trust_remote_code', True)
         
         logger.info(f"🔄 Chargement du modèle VLM: {model_name}")
         
@@ -46,7 +45,7 @@ class VLMService:
             torch.cuda.empty_cache()
             gc.collect()
         
-        # Configuration de quantisation 4-bit
+        # Configuration de quantization 4-bit
         quant_config = BitsAndBytesConfig(
             load_in_4bit=self.config['quantization']['load_in_4bit'],
             bnb_4bit_compute_dtype=getattr(
@@ -57,62 +56,38 @@ class VLMService:
             bnb_4bit_quant_type=self.config['quantization']['bnb_4bit_quant_type']
         )
         
-        # Créer dossier offload si nécessaire
-        offload_folder = Path("offload_phi3")
-        offload_folder.mkdir(exist_ok=True)
-        
         # Préparer max_memory
         max_memory = {}
         if isinstance(self.config.get('max_memory'), dict):
             for k, v in self.config['max_memory'].items():
-                # Convertir "3.5GB" → "3.5GiB"
+                # Convertir "5GB" → "5GiB"
                 if isinstance(v, str):
                     max_memory[int(k) if k.isdigit() else k] = v.replace("GB", "GiB")
                 else:
                     max_memory[k] = v
         
         try:
-            logger.info("📦 Chargement avec quantisation 4-bit...")
+            logger.info("📦 Chargement avec quantization 4-bit...")
             
-            # Charger le modèle Phi-3-Vision
-            self.model = AutoModelForCausalLM.from_pretrained(
+            # Charger le modèle LLaVA
+            self.model = LlavaForConditionalGeneration.from_pretrained(
                 model_name,
                 quantization_config=quant_config,
                 device_map=self.config.get('device_map', 'auto'),
                 max_memory=max_memory if max_memory else None,
                 torch_dtype=getattr(torch, self.config.get('torch_dtype', 'float16')),
-                trust_remote_code=trust_remote_code,
-                offload_folder=str(offload_folder),
-                low_cpu_mem_usage=True,
-                _attn_implementation="flash_attention_2" if torch.cuda.is_available() else None
-            )
-            
-            logger.info("✅ Modèle chargé avec succès!")
-            
-        except Exception as e:
-            logger.warning(f"⚠️  Chargement avec flash_attention échoué: {e}")
-            logger.info("📦 Tentative sans flash_attention...")
-            
-            # Retry sans flash_attention
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                quantization_config=quant_config,
-                device_map=self.config.get('device_map', 'auto'),
-                max_memory=max_memory if max_memory else None,
-                torch_dtype=getattr(torch, self.config.get('torch_dtype', 'float16')),
-                trust_remote_code=trust_remote_code,
-                offload_folder=str(offload_folder),
                 low_cpu_mem_usage=True
             )
             
-            logger.info("✅ Modèle chargé (sans flash_attention)")
+            logger.info("✅ Modèle LLaVA chargé avec succès!")
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du chargement: {e}")
+            raise
         
-        # Charger le processeur
+        # Charger le processor
         logger.info("📦 Chargement du processor...")
-        self.processor = AutoProcessor.from_pretrained(
-            model_name,
-            trust_remote_code=trust_remote_code
-        )
+        self.processor = AutoProcessor.from_pretrained(model_name)
         
         # Afficher info mémoire
         self._log_memory_info()
@@ -179,20 +154,25 @@ class VLMService:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             
-            # Format du prompt pour Phi-3-Vision
-            # Format: <|user|>\n<|image_1|>\n{prompt}<|end|>\n<|assistant|>\n
-            formatted_prompt = f"<|user|>\n<|image_1|>\n{prompt}<|end|>\n<|assistant|>\n"
+            # Format du prompt pour LLaVA
+            # Format: USER: <image>\n{prompt}\nASSISTANT:
+            formatted_prompt = f"USER: <image>\n{prompt}\nASSISTANT:"
             
             # Traiter l'image et le texte
             inputs = self.processor(
-                formatted_prompt,
-                image,
+                text=formatted_prompt,
+                images=image,
                 return_tensors="pt"
             )
             
-            # Déplacer inputs vers le device du modèle
-            model_device = next(self.model.parameters()).device
-            inputs = {k: v.to(model_device) if hasattr(v, 'to') else v for k, v in inputs.items()}
+            # Déplacer inputs vers GPU avec le bon dtype
+            model_device = self.device if self.device == "cuda" else "cpu"
+            inputs = {
+                k: v.to(model_device, torch.float16) if hasattr(v, 'to') and v.dtype == torch.float32 
+                else v.to(model_device) if hasattr(v, 'to') 
+                else v 
+                for k, v in inputs.items()
+            }
             
             # Générer la réponse
             with torch.inference_mode():
@@ -201,18 +181,15 @@ class VLMService:
                     max_new_tokens=max_new_tokens,
                     do_sample=do_sample,
                     temperature=temperature if do_sample else None,
-                    pad_token_id=self.processor.tokenizer.pad_token_id,
-                    eos_token_id=self.processor.tokenizer.eos_token_id
+                    top_p=0.9 if do_sample else None
                 )
             
-            # Décoder la sortie (skip le prompt d'entrée)
-            generated_text = self.processor.decode(
-                outputs[0][inputs['input_ids'].shape[1]:],
-                skip_special_tokens=True
-            )
+            # Décoder la sortie complète
+            generated_text = self.processor.decode(outputs[0], skip_special_tokens=True)
             
-            # Nettoyer le texte généré
-            generated_text = generated_text.strip()
+            # Extraire seulement la réponse (après ASSISTANT:)
+            if "ASSISTANT:" in generated_text:
+                generated_text = generated_text.split("ASSISTANT:")[-1].strip()
             
             return generated_text
             

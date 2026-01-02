@@ -5,9 +5,9 @@
 # Model Configuration
 models:
   vlm:
-    # Phi-3-Vision: VLM compact (4.2B params) - RECOMMANDÉ pour 4GB VRAM
-    name: "microsoft/Phi-3-vision-128k-instruct"
-    model_type: "phi3_v"  # Architecture Phi-3 Vision
+    # LLaVA-1.5-7B: VLM performant avec quantization 4-bit pour 6GB VRAM
+    name: "llava-hf/llava-1.5-7b-hf"
+    model_type: "llava"  # Architecture LLaVA
     quantization:
       load_in_4bit: true
       bnb_4bit_compute_dtype: "float16"
@@ -16,13 +16,12 @@ models:
     device_map: "auto"
     torch_dtype: "float16"
     max_memory: 
-      0: "3.5GB"  # GPU 0 (plus d'espace car modèle 4.2B)
+      0: "5GB"  # GPU 0 - RTX 4050 (6GB VRAM)
       "cpu": "12GB"
-    trust_remote_code: true  # Required pour Phi-3
+    trust_remote_code: false  # LLaVA ne nécessite pas trust_remote_code
     
-    # Alternatives testées:
-    # Med-Flamingo: architecture custom incompatible avec Transformers
-    # Llava 7B: trop gros, toujours en CPU sur 4GB VRAM
+    # Note: Testé et validé sur RTX 4050 6GB
+    # VRAM utilisée: ~3.8 GB avec quantization 4-bit
   
   embedding:
     name: "sentence-transformers/all-MiniLM-L6-v2"
