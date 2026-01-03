@@ -77,24 +77,24 @@ def ensure_directories(config: Dict[str, Any]) -> None:
 
 
 def format_prompt(
-    opencv_description: str,
+    context: str,
     rag_context: str,
-    prompt_type: str = "with_opencv"
+    prompt_type: str = "direct"
 ) -> str:
     """
     Construit le prompt pour le VLM.
-    
+
     Args:
-        opencv_description: Description textuelle depuis OpenCV
+        context: Contexte textuel optionnel (ex: mesures, notes cliniques)
         rag_context: Contexte médical depuis RAG
-        prompt_type: Type de prompt ('with_opencv' ou 'direct')
-        
+        prompt_type: Type de prompt ('with_context' ou 'direct')
+
     Returns:
         Prompt formaté
     """
-    if prompt_type == "with_opencv":
+    if prompt_type == "with_context":
         return f"""
-{opencv_description}
+{context}
 
 ================================================================================
 RELEVANT MEDICAL LITERATURE:
@@ -105,59 +105,27 @@ RELEVANT MEDICAL LITERATURE:
 EVIDENCE-BASED ANALYSIS INSTRUCTIONS:
 ================================================================================
 
-Based on the quantitative measurements provided above AND the medical literature,
-provide a comprehensive structured diagnosis.
+Using the provided clinical context and the retrieved medical literature, provide:
 
-**MANDATORY CITATION RULE**: Cite sources using [Source 1], [Source 2], etc.
+1. DIFFERENTIAL DIAGNOSIS (ranked)
+2. Key concerning features with evidence
+3. Comparison to literature patterns
+4. Clinical recommendations and urgency
+5. Patient communication guidance
 
-Structure your response with these EXACT sections:
-
-1. DIFFERENTIAL DIAGNOSIS (Ranked by Likelihood):
-   - AT LEAST 5 diagnoses with likelihood levels (Most Likely / Likely / Possible / Less Likely)
-   - Reference the specific measurements (asymmetry score, color zones, size, irregularity score)
-   - Cite literature for each diagnosis
-
-2. CONCERNING FEATURES WITH EVIDENCE:
-   - List specific quantitative features from the measurements
-   - Explain clinical significance with citations
-
-3. COMPARISON TO LITERATURE PATTERNS:
-   - How these measurements compare to literature patterns
-   - Statistical context if available from sources
-
-4. CLINICAL RECOMMENDATIONS:
-   - Urgency level (Immediate/Urgent/Routine) with justification from sources
-   - Specific next steps (biopsy type, excision, monitoring)
-   - Follow-up timeline
-
-5. PATIENT COMMUNICATION GUIDANCE:
-   - Clear, compassionate explanation of findings
-   - What to expect in next steps
-
-Remember: Cite [Source X] for every clinical claim.
+Include citations [Source X] for factual claims.
 """
     else:
         return f"""
 COMPREHENSIVE DERMATOLOGICAL LESION ANALYSIS:
 
-Analyze this skin lesion image in detail using:
-- Morphological features
-- Color characteristics
-- Border quality
-- Symmetry assessment
-- ABCDE criteria
+Analyze this skin lesion image or clinical description using the retrieved literature.
 
 ================================================================================
 RELEVANT MEDICAL LITERATURE:
 ================================================================================
 {rag_context}
 
-================================================================================
-EVIDENCE-BASED ANALYSIS INSTRUCTIONS:
-================================================================================
-
-Based on your visual analysis AND the medical literature, provide a comprehensive
-structured diagnosis with citations to sources.
-
-Remember: Cite [Source X] for every clinical claim.
+Provide a clear, evidence-based clinical interpretation with differential diagnosis
+and recommended next steps. Cite sources where appropriate.
 """

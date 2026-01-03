@@ -26,6 +26,13 @@ faiss-cpu>=1.7.4
 sentence-transformers>=2.2.2
 datasets>=2.16.0
 
+# Vision & Image Processing (OpenCV integration)
+Pillow>=10.1.0
+opencv-python-headless>=4.8.1.78
+imutils>=0.5.4
+scikit-image>=0.22.0
+webcolors>=1.13
+
 # UI
 gradio>=4.0.0
 gradio-client>=0.8.0

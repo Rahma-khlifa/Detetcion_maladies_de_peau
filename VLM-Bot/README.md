@@ -3,15 +3,14 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Système modulaire combinant **Vision-Language Model (Phi-3-Vision)**, **RAG** et **OpenCV** pour l'analyse automatique de lésions dermatologiques.
+Système modulaire combinant **Vision-Language Model (Phi-3-Vision)** et **RAG** pour l'analyse automatique de lésions dermatologiques.
 
 ---
 
 ## 🚀 Fonctionnalités
 
-- **🔬 OpenCV**: Extraction quantitative de caractéristiques (taille, couleur, asymétrie, bordures, texture)
 - **🤖 VLM Phi-3-Vision**: Analyse visuelle 4.2B avec quantisation 4-bit (optimisé pour 4GB VRAM)
-- **📚 RAG**: Diagnostic basé sur la littérature médicale avec citations
+ - **📚 RAG**: Diagnostic basé sur la littérature médicale avec citations
 - **🎨 Gradio**: Interface web interactive
 
 ---
@@ -104,7 +103,6 @@ Puis ouvrir: http://localhost:7860
 ```python
 from src.services.vlm_service import VLMService
 from src.services.rag_service import RAGService
-from src.services.opencv_service import OpenCVService
 from src.utils.helpers import load_config
 from PIL import Image
 
@@ -114,7 +112,6 @@ config = load_config()
 # Initialiser les services
 vlm = VLMService(config['models']['vlm'])
 rag = RAGService(config['rag'])
-opencv = OpenCVService(config['opencv'])
 
 # Charger modèles
 vlm.load_model()
@@ -122,13 +119,12 @@ rag.load_index('data/processed/faiss_index')
 
 # Analyser une image
 image = Image.open('lesion.jpg')
-opencv_result = opencv.analyze_lesion(image)
 rag_results = rag.search("melanoma diagnostic criteria")
 rag_context = rag.format_context(rag_results)
 
 # Générer diagnostic
 from src.utils.helpers import format_prompt
-prompt = format_prompt(opencv_result['description'], rag_context)
+prompt = format_prompt("", rag_context)
 diagnosis = vlm.generate_diagnosis(image, prompt)
 
 print(diagnosis)
@@ -151,7 +147,7 @@ VLM-Bot/
 │   ├── services/
 │   │   ├── vlm_service.py      # Service VLM (Phi-3-Vision)
 │   │   ├── rag_service.py      # Service RAG (FAISS)
-│   │   └── opencv_service.py   # Service OpenCV
+│   │   └── (optional) opencv_service.py   # Service OpenCV (removed from runtime)
 │   └── utils/
 │       └── helpers.py          # Fonctions utilitaires
 │
@@ -195,8 +191,7 @@ python scripts/check_installation.py
 # 2. Tester l'index RAG
 python scripts/build_index.py
 
-# 3. Tester le service OpenCV
-python -c "from src.services.opencv_service import OpenCVService; from src.utils.helpers import load_config; from PIL import Image; svc = OpenCVService(load_config()['opencv']); print(svc.analyze_lesion(Image.new('RGB', (512, 512), 'red'))['description'][:200])"
+# 3. (Optional) If you need classical CV measurements, the OpenCV service is available but not used by default.
 
 # 4. Vérifier GPU et CUDA
 python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}'

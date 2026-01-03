@@ -113,7 +113,13 @@ rag:
       - "cryotherapy"
       - "phototherapy"
       - "topical treatment"
-
+# OpenCV Configuration
+opencv:
+  max_image_dim: 1024
+  segmentation_clusters: 3
+  min_lesion_size: 500
+  n_colors: 4
+  pixels_per_mm: 10
 # Gradio Configuration
 gradio:
   port: 7861

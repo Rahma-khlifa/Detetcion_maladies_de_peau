@@ -12,7 +12,6 @@ from datetime import datetime
 
 from services.vlm_service import VLMService
 from services.rag_service import RAGService
-from services.opencv_service import OpenCVService
 from utils.helpers import (
     load_config,
     setup_logging,
@@ -37,7 +36,6 @@ except Exception as e:
 # Initialiser les services globaux
 vlm_service = None
 rag_service = None
-opencv_service = OpenCVService(config['opencv'])
 
 
 def initialize_services():
@@ -63,8 +61,7 @@ def initialize_services():
 
 def analyze_lesion_complete(
     image,
-    use_opencv,
-    opencv_data_manual,
+    additional_context,
     max_tokens,
     temperature,
     num_sources
@@ -74,17 +71,16 @@ def analyze_lesion_complete(
     
     Args:
         image: Image PIL
-        use_opencv: Utiliser OpenCV pour extraction
-        opencv_data_manual: Données manuelles (si use_opencv=False)
+        additional_context: Contexte additionnel optionnel
         max_tokens: Max tokens à générer
         temperature: Température de sampling
         num_sources: Nombre de sources RAG
         
     Returns:
-        Tuple (opencv_output, sources_text, diagnosis_text)
+        Tuple (sources_text, diagnosis_text)
     """
     if image is None:
-        return "⚠️ Veuillez télécharger une image d'abord!", "", ""
+        return "", "⚠️ Veuillez télécharger une image d'abord!"
     
     try:
         # Initialiser les services (lazy)
@@ -95,25 +91,7 @@ def analyze_lesion_complete(
             image = Image.fromarray(image)
         image = image.convert("RGB")
         
-        # Phase 1: Extraction OpenCV ou données manuelles
-        if use_opencv:
-            logger.info("🔬 Extraction OpenCV...")
-            opencv_result = opencv_service.analyze_lesion(image)
-            
-            if opencv_result.get('error'):
-                return opencv_result['description'], "", ""
-            
-            opencv_description = opencv_result['description']
-            mode_text = "🔬 OpenCV Feature Extraction Used"
-        else:
-            if opencv_data_manual and opencv_data_manual.strip():
-                opencv_description = opencv_data_manual
-                mode_text = "📊 Manual Pre-computed Data Used"
-            else:
-                opencv_description = None
-                mode_text = "👁️ Direct VLM Analysis (No Pre-computed Data)"
-        
-        # Phase 2: Recherche RAG
+        # Phase 1: Recherche RAG
         logger.info("📚 Recherche RAG...")
         key_terms = [
             "melanoma", "atypical nevus", "dysplastic nevus",
@@ -125,8 +103,7 @@ def analyze_lesion_complete(
         rag_results = rag_service.search(query_text, top_k=int(num_sources))
         
         # Formater les sources
-        sources_text = f"**{mode_text}**\n\n"
-        sources_text += f"**Found {len(rag_results)} relevant medical abstracts:**\n\n"
+        sources_text = f"**Found {len(rag_results)} relevant medical abstracts:**\n\n"
         
         retrieved_context = ""
         for i, (doc, score) in enumerate(rag_results, 1):
@@ -135,13 +112,13 @@ def analyze_lesion_complete(
             sources_text += f"{'-'*80}\n\n"
             retrieved_context += f"\n[Source {i}]:\n{doc.page_content}\n"
         
-        # Phase 3: Construire le prompt
-        if opencv_description:
-            prompt = format_prompt(opencv_description, retrieved_context, "with_opencv")
+        # Phase 2: Construire le prompt
+        if additional_context and additional_context.strip():
+            prompt = format_prompt(additional_context, retrieved_context, "with_context")
         else:
             prompt = format_prompt("", retrieved_context, "direct")
         
-        # Phase 4: Génération VLM
+        # Phase 3: Génération VLM
         logger.info("🤖 Génération du diagnostic...")
         diagnosis = vlm_service.generate_diagnosis(
             image=image,
@@ -150,26 +127,12 @@ def analyze_lesion_complete(
             temperature=float(temperature)
         )
         
-        # Préparer le bloc OpenCV séparément pour éviter d'avoir des backslashes
-        if use_opencv and opencv_description:
-            opencv_block = (
-                "OPENCV FEATURE EXTRACTION:\n"
-                + str(opencv_description)
-                + "\n\n"
-                + ("=" * 80)
-                + "\n"
-            )
-        else:
-            opencv_block = ""
-
         # Sauvegarder le rapport
         report = f"""
 SKIN LESION ANALYSIS REPORT
 {'='*80}
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-Analysis Mode: {mode_text}
-
-{opencv_block}
+Analysis Method: VLM (Vision Language Model) + RAG
 
 EVIDENCE-BASED DIAGNOSIS:
 {diagnosis}
@@ -189,14 +152,13 @@ professional medical advice, diagnosis, or treatment. Consult a qualified dermat
         logger.info(f"✅ Analyse terminée. Rapport: {filename}")
         
         # Retourner les résultats
-        opencv_output = opencv_description if use_opencv else ""
-        return opencv_output, sources_text, diagnosis
+        return sources_text, diagnosis
         
     except Exception as e:
         logger.error(f"❌ Erreur: {e}", exc_info=True)
         import traceback
         error_msg = f"❌ Erreur: {str(e)}\n\n{traceback.format_exc()}"
-        return error_msg, "", ""
+        return "", error_msg
 
 
 # ============================================================================
@@ -211,7 +173,7 @@ custom_css = """
     .gradio-container {
         max-width: 1400px !important;
     }
-    #opencv_output, #sources_output, #diagnosis_output {
+    #sources_output, #diagnosis_output {
         max-height: 500px;
         overflow-y: auto;
     }
@@ -224,11 +186,11 @@ with gr.Blocks(
     gr.Markdown("""
     # 🔬 VLM-Bot - Système d'Analyse Dermatologique
     
-    **OpenCV + Phi-3-Vision + RAG**
+    **Llava + RAG**
     
-    - 🎨 **OpenCV**: Extraction quantitative automatique
-    - 🤖 **VLM**: Phi-3-Vision-128k avec quantisation 4-bit
+    - 🤖 **VLM**: Llava-1.5-7B avec quantisation 4-bit
     - 📚 **RAG**: Diagnostic basé sur la littérature médicale
+    - 👁️ **Analyse**: Vision + Language pour diagnostic complet
     
     ⚠️ **DISCLAIMER**: Usage éducatif uniquement. Consultez toujours un dermatologue.
     """)
@@ -238,22 +200,15 @@ with gr.Blocks(
             gr.Markdown("### 📤 Étape 1: Upload Image")
             image_input = gr.Image(type="pil", label="Image de la lésion")
             
-            gr.Markdown("### 🔬 Étape 2: Mode d'Analyse")
-            use_opencv = gr.Checkbox(
-                value=True,
-                label="✅ Utiliser OpenCV (Recommandé)",
-                info="Extraction automatique de mesures"
+            gr.Markdown("### � Étape 2: Contexte Additionnel (Optionnel)")
+            additional_context = gr.Textbox(
+                label="Contexte clinique",
+                placeholder="Ex: Patient de 45 ans, lésion évoluant depuis 6 mois...",
+                lines=4,
+                info="Informations supplémentaires pour l'analyse"
             )
             
-            gr.Markdown("### 📊 Étape 3: Données Manuelles (Optionnel)")
-            opencv_data_manual = gr.Textbox(
-                label="Mesures manuelles",
-                placeholder="Seulement si OpenCV désactivé...",
-                lines=8,
-                info="Ignoré si OpenCV est activé"
-            )
-            
-            gr.Markdown("### ⚙️ Étape 4: Paramètres")
+            gr.Markdown("### ⚙️ Étape 3: Paramètres")
             with gr.Accordion("Paramètres avancés", open=False):
                 max_tokens = gr.Slider(
                     512, 2048, value=1024, step=128,
@@ -274,15 +229,7 @@ with gr.Blocks(
             gr.Markdown("### 📊 Résultats")
             
             with gr.Tabs():
-                with gr.Tab("🔬 Caractéristiques OpenCV"):
-                    opencv_output = gr.Textbox(
-                        label="Mesures quantitatives",
-                        lines=15,
-                        max_lines=30,
-                        elem_id="opencv_output"
-                    )
-                
-                with gr.Tab("📚 Sources Médicales"):
+                with gr.Tab("� Sources Médicales"):
                     sources_output = gr.Textbox(
                         label="Littérature récupérée",
                         lines=12,
@@ -290,7 +237,7 @@ with gr.Blocks(
                         elem_id="sources_output"
                     )
                 
-                with gr.Tab("🏥 Diagnostic"):
+                with gr.Tab("🏥 Diagnostic VLM"):
                     diagnosis_output = gr.Textbox(
                         label="Diagnostic clinique avec citations",
                         lines=12,
@@ -304,10 +251,10 @@ with gr.Blocks(
         ### 🎯 Instructions:
         
         1. **Téléchargez** une image de lésion cutanée
-        2. **Activez OpenCV** pour extraction automatique (ou fournissez données manuelles)
+        2. **Ajoutez** du contexte clinique optionnel (âge, symptômes, durée, etc.)
         3. **Ajustez** les paramètres si nécessaire
         4. **Cliquez** sur "Analyser"
-        5. **Consultez** les résultats dans les 3 onglets
+        5. **Consultez** les résultats dans les 2 onglets
         6. Le rapport complet est sauvegardé automatiquement (analysis_YYYYMMDD_HHMMSS.txt)
         
         ### ⚡ Note: Premier lancement
@@ -319,13 +266,12 @@ with gr.Blocks(
         fn=analyze_lesion_complete,
         inputs=[
             image_input,
-            use_opencv,
-            opencv_data_manual,
+            additional_context,
             max_tokens,
             temperature,
             num_sources
         ],
-        outputs=[opencv_output, sources_output, diagnosis_output]
+        outputs=[sources_output, diagnosis_output]
     )
 
 

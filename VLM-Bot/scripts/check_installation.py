@@ -78,7 +78,6 @@ critical_deps = {
     'gradio': 'Interface web',
     'PIL': 'Images (Pillow)',
     'sklearn': 'ML utils (scikit-learn)',
-    'skimage': 'Image processing (scikit-image)',
     'yaml': 'Config (pyyaml)',
     'dotenv': 'Env vars (python-dotenv)',
 }
@@ -131,7 +130,6 @@ required_files = [
     'src/app.py',
     'src/services/vlm_service.py',
     'src/services/rag_service.py',
-    'src/services/opencv_service.py',
     'src/utils/helpers.py',
     'scripts/build_index.py',
 ]

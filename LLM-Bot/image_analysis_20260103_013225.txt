@@ -1,0 +1,81 @@
+
+COMPREHENSIVE DERMATOLOGICAL IMAGE ANALYSIS
+================================================================================
+Generated: 2026-01-03 01:32:25
+Analysis Method: OpenCV Feature Extraction + Flan-T5-XL + RAG
+
+================================================================================
+AUTOMATED IMAGE ANALYSIS (OpenCV):
+================================================================================
+DERMATOLOGICAL LESION ANALYSIS:
+
+MORPHOLOGY:
+- Size: Approximately 38.0mm diameter, 166.1mm² area
+- Shape: markedly asymmetric with irregular borders
+- Border definition: well-defined
+- Overall circularity: 0.121 (1.0 = perfect circle)
+
+COLOR ANALYSIS:
+- Number of distinct color zones: 4
+- Color composition: light brown/tan 32.2% (mixed distribution); medium brown 29.3% (predominantly central); medium brown 25.1% (predominantly central); medium brown 13.4% (predominantly central)
+- Color pattern: Variegated (multiple distinct colors)
+
+SURFACE & TEXTURE:
+- Pigmentation pattern: homogeneous pigmentation
+- Surface appearance: smooth/uniform
+- Texture complexity score: 159.5
+
+BORDER CHARACTERISTICS:
+- Border regularity: irregular
+- Border definition: well-defined
+- Irregularity score: 5.33
+
+ASYMMETRY ASSESSMENT:
+- Asymmetry score: 56.4
+- Classification: markedly asymmetric
+
+ABCDE MELANOMA RISK FACTORS:
+⚠️  A: Significant asymmetry detected
+⚠️  B: Irregular border shape
+⚠️  C: Multiple colors present (≥4 distinct tones)
+⚠️  D: Diameter > 6mm (38.0mm)
+
+SUMMARY FOR CLINICAL CORRELATION:
+This lesion presents with 4 distinct color zones, irregular borders,
+and markedly asymmetric morphology. Multiple concerning features warrant further evaluation.
+
+NOTE: This is an automated image analysis. Clinical evaluation by a dermatologist
+is essential for accurate diagnosis and management decisions.
+
+
+================================================================================
+RETRIEVED MEDICAL LITERATURE:
+
+[Source 1]:
+Histopathologic spectrum of clinically atypical melanocytic nevi. II. Studies of nonfamilial melanoma [published erratum appears in Arch Dermatol 1990 Dec;126(12):1616] We studied the clinically most atypical pigmented lesion removed from each of 142 patients with newly diagnosed sporadic melanoma. The specimens were categorized as to the type of nevus, ie, junctional or compound, presence of congenital features, and degree of nuclear atypicality--presence of nuclear enlargement, nuclear
+
+[Source 2]:
+Malignant melanoma and pigmented lesions: a diagnostic and management dilemma. We document two cases of malignancy occurring at the site of partially removed benign nevi. Because of the difficulty in clinical diagnosis and the uncertainty in its behavior, we propose that any recurring melanocytic nevus expanding beyond the original surgical scar be re-excised and the specimen carefully analyzed to ensure complete removal.
+
+[Source 3]:
+Recurrent pigmented melanocytic nevus. A benign lesion, not to be mistaken for malignant melanoma. Melanocytic nevi that recur after incomplete removal are pigmented lesions that may clinically and pathologically simulate malignant melanoma in situ. Five examples of recurrent pigmented melanocytic nevus, with emphasis on light microscopic and immunohistochemical findings, are reported herein. Prominent HMB-45 staining in these nevi may cause further confusion in differentiating them from
+
+[Source 4]:
+not been previously identified as a distinct histologic entity. Immunoperoxidase staining for S100 protein and counterstaining with azure B distinguished the presence of melanocytes among numerous melanophages within the dermis. The compound variant of blue nevus can be distinguished histologically from combined blue nevus, pigmented spindle cell nevus, malignant melanoma, and melanosis due to a regressed malignant melanoma. The six lesions were from three men and three women whose ages ranged
+
+[Source 5]:
+Compound blue nevus: a variant of blue nevus with an additional junctional dendritic component. A clinical, histopathologic, and immunohistochemical study of six cases. We studied six cases of heavily pigmented melanocytic lesions with features of blue nevi within the dermis, but with an additional junctional dendritic component. This compound variant of blue nevus is an uncommon lesion that has not been previously identified as a distinct histologic entity. Immunoperoxidase staining for S100
+
+
+================================================================================
+
+
+================================================================================
+CLINICAL INTERPRETATION (LLM):
+================================================================================
+Nevi and found that a large atypical nevus with a smooth surface and homogeneous pigmentation, asymmetry, and irregular borders is an Atypical Melanoma.
+
+================================================================================
+DISCLAIMER: For research and educational purposes only. NOT a substitute for
+professional medical advice, diagnosis, or treatment. Consult a qualified dermatologist.
+================================================================================

@@ -19,10 +19,6 @@ safetensors>=0.4.1
 
 # Vision & Image Processing
 Pillow>=10.1.0
-opencv-python-headless>=4.8.1.78
-imutils>=0.5.4
-scikit-image>=0.22.0
-matplotlib>=3.8.0  # Pour visualisations (utilisé dans notebook)
 
 # RAG & Embeddings
 langchain>=0.1.0
